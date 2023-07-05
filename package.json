@@ -18,9 +18,7 @@
   },
   "dependencies": {
     "@octokit/rest": "^19.0.13",
-    "chalk": "^5.2.0",
     "clear": "^0.1.0",
-    "clui": "^0.3.6",
     "dotenv": "^16.3.1",
     "figlet": "^1.6.0",
     "inquirer": "^9.2.7",
