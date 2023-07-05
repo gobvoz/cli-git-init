@@ -1,0 +1,15 @@
+.idea
+.vscode
+.DS_Store
+
+/node_modules
+/build
+
+**/*.local
+**/*.local.*
+
+**/*.env
+**/*.env.*
+!.env.example
+
+**/*.log
