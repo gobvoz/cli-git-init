@@ -96,13 +96,14 @@ if (!privateKey) {
   process.exit();
 }
 
-const repoName = path.basename(process.cwd());
-
 const octokit = new Octokit({
   auth: privateKey,
 });
 
 try {
+  const repoNameFromArgs = process.argv[2];
+  const repoName = repoNameFromArgs || path.basename(process.cwd());
+
   // Check if repo name already exists
   const result = await octokit.request('GET /user/repos', {
     type: 'all',
@@ -127,20 +128,20 @@ try {
 
   // Add remote
   if (sshUrl) {
-    const addRemoteResult = await new Promise((resolve, reject) => {
+    const addRemoteResult = await new Promise((resolve, reject) =>
       exec(`git remote add origin ${sshUrl}`, (error, stdout, stderr) => {
         if (error) {
           log.error(`${error.message}`);
           reject(false);
-        }
-        if (stderr) {
+        } else if (stderr) {
           log.error(stderr);
           reject(false);
+        } else {
+          log.done(`'remote' for repository added`);
+          resolve(true);
         }
-        log.done(`'remote' for repository added`);
-        resolve(true);
-      });
-    });
+      }),
+    );
     if (!addRemoteResult) process.exit();
   } else {
     log.error(`ssh_url not found`);
