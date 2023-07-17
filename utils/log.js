@@ -12,4 +12,7 @@ export default {
   yellow: function (message) {
     this._log(`\x1b[33m${message}\x1b[0m`);
   },
+  info: function (message) {
+    this._log(message, '\x1b[34m\x1b[01mINFO \x1b[0m');
+  },
 };

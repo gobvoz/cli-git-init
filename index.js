@@ -6,9 +6,10 @@ import { exec } from 'child_process';
 import dotenv from 'dotenv';
 import clear from 'clear';
 import figlet from 'figlet';
-import { Octokit } from 'octokit';
+import inquirer from 'inquirer';
 
 import log from './utils/log.js';
+import Git from './utils/git.js';
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,20 +32,7 @@ console.log();
 if (fs.existsSync('.git')) {
   log.warning(`Already a Git repository!`);
 } else {
-  await new Promise((resolve, reject) =>
-    exec('git init', (error, stdout, stderr) => {
-      if (error) {
-        log.error(error.message);
-        reject(false);
-      }
-      if (stderr) {
-        log.error(stderr);
-        reject(false);
-      }
-      log.done(stdout.split('\n')[0]);
-      resolve(true);
-    }),
-  );
+  await Git.init();
 }
 
 const packageJsonPath = path.resolve('package.json');
@@ -71,10 +59,7 @@ const gitIgnorePath = path.resolve('.gitignore');
 if (fs.existsSync(gitIgnorePath)) {
   log.warning(`${gitIgnorePath} already exists`);
 } else {
-  fs.writeFileSync(
-    gitIgnorePath,
-    '.idea\n.vscode\n.DS_Store\n\n/node_modules\n/build\n\n**/*.local\n**/*.local.*\n\n**/*.env\n**/*.env.*\n!.env.example\n\n**/*.log',
-  );
+  await Git.addGitIgnore(gitIgnorePath);
   log.done(`${gitIgnorePath} created`);
 }
 
@@ -96,74 +81,78 @@ if (!privateKey) {
   process.exit();
 }
 
-const octokit = new Octokit({
-  auth: privateKey,
-});
+const git = new Git(privateKey);
 
-try {
-  const repoNameFromArgs = process.argv[2];
-  const repoName = repoNameFromArgs || path.basename(process.cwd());
+// try {
+const repoNameFromArgs = process.argv[2];
+let repoName = repoNameFromArgs || path.basename(process.cwd());
 
-  // Check if repo name already exists
-  const result = await octokit.request('GET /user/repos', {
-    type: 'all',
-  });
-
+do {
+  const result = await git.getGitRepoList();
   const isNameExist = result.data.map(repo => repo.name).includes(repoName);
+
   if (isNameExist) {
-    log.error(`repository ${repoName} already exists`);
-    process.exit();
-  }
+    log.info(`repository "${repoName}" already exists`);
 
-  // Create repo
-  const response = await octokit.request('POST /user/repos', {
-    name: repoName,
-    description: '',
-    homepage: '',
-    private: false,
-  });
-  log.done(`${response?.data?.html_url}`);
+    const { action } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'action',
+        message: 'What do you want to do?',
+        choices: [
+          { name: 'Create repository with new name', value: 'new' },
+          { name: 'Add "remote" with existing repository', value: 'remote' },
+          { name: 'Exit', value: 'exit' },
+        ],
+      },
+    ]);
 
-  const sshUrl = response?.data?.ssh_url;
+    if (action === 'new') {
+      const { name } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'name',
+          message: 'Enter new repository name:',
+        },
+      ]);
+      repoName = name;
+      continue;
+    }
 
-  // Add remote
-  if (sshUrl) {
-    const addRemoteResult = await new Promise((resolve, reject) =>
-      exec(`git remote add origin ${sshUrl}`, (error, stdout, stderr) => {
-        if (error) {
-          log.error(`${error.message}`);
-          reject(false);
-        } else if (stderr) {
-          log.error(stderr);
-          reject(false);
-        } else {
-          log.done(`'remote' for repository added`);
-          resolve(true);
-        }
-      }),
-    );
-    if (!addRemoteResult) process.exit();
+    if (action === 'remote') {
+      break;
+    }
+
+    if (action === 'exit') {
+      log.done(`Bye!`);
+      process.exit();
+    }
   } else {
-    log.error(`ssh_url not found`);
+    // Create repo
+    await git.createRepo(repoName);
+    log.done(`Repository "${repoName}" created`);
+    break;
   }
 
-  // Initial commit
-  const result1 = await new Promise((resolve, reject) =>
-    exec('git add . && git commit -m "Initial commit"', (error, stdout, stderr) => {
-      if (error) {
-        log.error(error.message);
-        reject(false);
-      }
-      if (stderr) {
-        log.error(stderr);
-        reject(false);
-      }
-      log.done(stdout.split('\n')[0]);
-      resolve(true);
-    }),
-  );
-  if (!result1) process.exit();
-} catch (error) {
-  log.error(error.message);
+  break;
+} while (true);
+
+const result = await git.getGitRepoList();
+// console.log(result);
+const newRepo = result.data.find(repo => repo.name === repoName);
+
+if (!newRepo) {
+  log.error(`repository "${repoName}" not found`);
   process.exit();
 }
+
+// Add remote
+const sshUrl = newRepo.ssh_url;
+if (sshUrl) {
+  await git.addRemote(sshUrl);
+} else {
+  log.error(`ssh_url not found`);
+}
+
+// Initial commit
+if (!(await git.createInitialCommit())) process.exit();
