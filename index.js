@@ -10,9 +10,12 @@ import inquirer from 'inquirer';
 
 import log from './utils/log.js';
 import Git from './utils/git.js';
+import { getArgs } from './utils/args.js';
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const args = getArgs();
 
 const envPath = path.resolve(__dirname, '.env');
 if (!fs.existsSync(envPath)) {
@@ -83,8 +86,7 @@ if (!privateKey) {
 
 const git = new Git(privateKey);
 
-// try {
-const repoNameFromArgs = process.argv[2];
+const repoNameFromArgs = args['repo-name'];
 let repoName = repoNameFromArgs || path.basename(process.cwd());
 
 do {
@@ -138,7 +140,7 @@ do {
 } while (true);
 
 const result = await git.getGitRepoList();
-// console.log(result);
+
 const newRepo = result.data.find(repo => repo.name === repoName);
 
 if (!newRepo) {
@@ -155,4 +157,10 @@ if (sshUrl) {
 }
 
 // Initial commit
-if (!(await git.createInitialCommit())) process.exit();
+if (args['no-initial-commit']) {
+  log.info(`initial commit skipped`);
+} else {
+  if (!(await git.createInitialCommit())) process.exit();
+}
+
+log.done(`All done!`);
