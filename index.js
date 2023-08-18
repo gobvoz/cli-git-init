@@ -122,6 +122,8 @@ do {
     }
 
     if (action === 'remote') {
+      // prevent initial commit
+      args['no-initial-commit'] = true;
       break;
     }
 
