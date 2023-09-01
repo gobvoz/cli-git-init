@@ -80,7 +80,7 @@ if (!fs.existsSync(keyPath)) {
 
 const privateKey = fs.readFileSync(keyPath, 'utf8');
 if (!privateKey) {
-  log.error(`${keyPath} is empty`);
+  log.error(`${keyPath} is empty. Please add gitHub API key to the file`);
   process.exit();
 }
 

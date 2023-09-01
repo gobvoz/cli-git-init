@@ -1,6 +1,6 @@
 {
-  "name": "git-init",
-  "version": "1.0.0",
+  "name": "@gobvoz/git-init",
+  "version": "0.0.0",
   "description": "'git init' on steroids.",
   "main": "index.js",
   "type": "module",
