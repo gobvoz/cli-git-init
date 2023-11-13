@@ -10,6 +10,8 @@ export default class Git {
       auth: privateKey,
     });
 
+    this.init = Git.init;
+    this.addGitIgnore = Git.addGitIgnore;
     this.getGitRepoList = this.getGitRepoList.bind(this);
     this.createRepo = this.createRepo.bind(this);
     this.addRemote = this.addRemote.bind(this);

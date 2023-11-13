@@ -20,9 +20,9 @@ git-init
 - Initialize empty Git repository in current folder;
 - Write default package.json
 - create .gitignore
-- create gitHub repository with same name
+- create gitHub repository with same name (will ask options)
 - add remote for repository
-- add initial commit
+- add initial commit (will ask options)
 
 ```sh
 git-init --no-initial-commit
